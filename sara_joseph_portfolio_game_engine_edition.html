@@ -1,0 +1,1030 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sara Joseph Kaithayil | Digital Media & Animation Portfolio</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        engine: {
+                            bg: '#090b10',
+                            card: 'rgba(15, 20, 32, 0.75)',
+                            border: 'rgba(0, 240, 255, 0.2)',
+                            cyan: '#00f0ff',
+                            violet: '#a855f7',
+                            gold: '#fbbf24',
+                            red: '#f43f5e'
+                        }
+                    },
+                    fontFamily: {
+                        mono: ['JetBrains Mono', 'Fira Code', 'monospace'],
+                        sans: ['Inter', 'sans-serif']
+                    },
+                    boxShadow: {
+                        'neon-cyan': '0 0 15px rgba(0, 240, 255, 0.4), inset 0 0 10px rgba(0, 240, 255, 0.2)',
+                        'neon-violet': '0 0 15px rgba(168, 85, 247, 0.4)',
+                        'hud': '0 8px 32px 0 rgba(0, 0, 0, 0.67)'
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Google Fonts & Font Awesome Icons -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=JetBrains+Mono:wght@400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Three.js CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #07090e;
+            color: #e2e8f0;
+            overflow-x: hidden;
+        }
+
+        .font-mono {
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* Glassmorphism panel styling */
+        .hud-panel {
+            background: rgba(13, 17, 28, 0.75);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(0, 240, 255, 0.2);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
+            position: relative;
+        }
+
+        .hud-panel::before {
+            content: '';
+            position: absolute;
+            top: -1px;
+            left: -1px;
+            width: 8px;
+            height: 8px;
+            border-top: 2px solid #00f0ff;
+            border-left: 2px solid #00f0ff;
+        }
+
+        .hud-panel::after {
+            content: '';
+            position: absolute;
+            bottom: -1px;
+            right: -1px;
+            width: 8px;
+            height: 8px;
+            border-bottom: 2px solid #00f0ff;
+            border-right: 2px solid #00f0ff;
+        }
+
+        .hud-panel-violet::before, .hud-panel-violet::after {
+            border-color: #a855f7;
+        }
+
+        /* Scanline HUD overlay effect */
+        .scanlines {
+            background: linear-gradient(
+                rgba(18, 16, 16, 0) 50%, 
+                rgba(0, 0, 0, 0.25) 50%
+            ), linear-gradient(
+                90deg,
+                rgba(255, 0, 0, 0.03),
+                rgba(0, 255, 0, 0.01),
+                rgba(0, 0, 255, 0.03)
+            );
+            background-size: 100% 4px, 6px 100%;
+            pointer-events: none;
+        }
+
+        /* Glowing text accents */
+        .text-glow-cyan {
+            text-shadow: 0 0 10px rgba(0, 240, 255, 0.6);
+        }
+        .text-glow-violet {
+            text-shadow: 0 0 10px rgba(168, 85, 247, 0.6);
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #090b10;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #00f0ff;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #a855f7;
+        }
+
+        /* Pulse animation for record status */
+        @keyframes pulse-fast {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+        .animate-pulse-fast {
+            animation: pulse-fast 1.2s infinite;
+        }
+    </style>
+</head>
+<body class="relative min-h-screen selection:bg-cyan-500 selection:text-black">
+
+    <!-- WebGL Canvas Background -->
+    <div id="webgl-container" class="fixed inset-0 z-0 pointer-events-auto"></div>
+
+    <!-- Scanline HUD effect layer -->
+    <div class="scanlines fixed inset-0 z-10 opacity-30 pointer-events-none"></div>
+
+    <!-- Top Viewport Control Bar / Engine Status Header -->
+    <header class="fixed top-0 left-0 w-full z-40 bg-slate-950/80 backdrop-blur-md border-b border-cyan-500/30 px-4 py-2 flex justify-between items-center text-xs font-mono">
+        <div class="flex items-center gap-4">
+            <div class="flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-pulse-fast"></span>
+                <span class="font-bold text-cyan-400 tracking-wider">ENGINE VIEWPORT v4.27</span>
+            </div>
+            <div class="hidden sm:flex items-center gap-2 text-slate-400 border-l border-slate-800 pl-4">
+                <span>FPS: <span id="fps-counter" class="text-emerald-400">60</span></span>
+                <span>PROJ: <span class="text-amber-400">SARA_PORTFOLIO.uproject</span></span>
+            </div>
+        </div>
+
+        <!-- Engine Viewport Controls -->
+        <div class="flex items-center gap-2">
+            <div class="bg-slate-900 border border-slate-700 rounded px-2 py-1 flex items-center gap-2">
+                <i class="fa-solid fa-camera text-cyan-400"></i>
+                <span class="text-slate-300 hidden md:inline">CAMERA:</span>
+                <button onclick="setCameraView('perspective')" class="hover:text-cyan-400 px-1 text-xs">PERS</button> |
+                <button onclick="setCameraView('top')" class="hover:text-cyan-400 px-1 text-xs">TOP</button> |
+                <button onclick="setCameraView('front')" class="hover:text-cyan-400 px-1 text-xs">FRONT</button>
+            </div>
+            <button id="wireframe-toggle" class="bg-slate-900 hover:bg-cyan-950 border border-cyan-500/40 text-cyan-300 px-3 py-1 rounded transition text-xs flex items-center gap-1.5">
+                <i class="fa-solid fa-cube"></i> <span class="hidden md:inline">MESH:</span> WIRE
+            </button>
+            <button id="audio-toggle" class="bg-slate-900 hover:bg-violet-950 border border-violet-500/40 text-violet-300 px-3 py-1 rounded transition text-xs flex items-center gap-1.5">
+                <i class="fa-solid fa-volume-xmark" id="audio-icon"></i> <span class="hidden md:inline">AUDIO</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Interactive Content Container -->
+    <main class="relative z-20 pt-16 pb-20 px-4 md:px-8 max-w-7xl mx-auto space-y-16">
+
+        <!-- HERO SECTION / LEVEL HEADS-UP DISPLAY -->
+        <section class="min-h-[85vh] flex flex-col justify-center items-start pt-6">
+            <div class="w-full grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+                
+                <!-- Main Character Profile Stats -->
+                <div class="lg:col-span-8 hud-panel p-6 md:p-10 rounded-xl">
+                    <div class="flex items-center gap-3 mb-3">
+                        <span class="px-2.5 py-0.5 rounded bg-cyan-500/20 border border-cyan-400/50 text-cyan-300 text-xs font-mono font-bold tracking-widest uppercase">
+                            [ LVL 99 ] VISUAL STORYTELLER
+                        </span>
+                        <span class="text-xs font-mono text-slate-400"><i class="fa-solid fa-location-dot text-amber-400 mr-1"></i>ST. JOSEPH'S UNIV</span>
+                    </div>
+
+                    <h1 class="text-4xl md:text-6xl font-extrabold tracking-tight text-white mb-2 font-mono">
+                        SARA JOSEPH <span class="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-violet-400 to-amber-300 text-glow-cyan">KAITHAYIL</span>
+                    </h1>
+                    
+                    <p class="text-lg md:text-xl text-cyan-300/90 font-mono mb-6">
+                        Digital Media Artist &bull; 2D Animator &bull; Visual Storyteller &bull; Content Creator
+                    </p>
+
+                    <p class="text-slate-300 leading-relaxed text-sm md:text-base max-w-2xl mb-8">
+                        Driven by visual storytelling and high-fidelity animation pipelines. Possesses technical dexterity across 2D/3D art suites, frame-by-frame animation, stop-motion claymation, and world-building narrative design.
+                    </p>
+
+                    <!-- Interactive Action HUD Buttons -->
+                    <div class="flex flex-wrap gap-4 font-mono text-sm">
+                        <a href="#flagship" onclick="playAudioTone('click')" class="hud-btn bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold px-6 py-3 rounded-lg shadow-neon-cyan transition flex items-center gap-2 group">
+                            <i class="fa-solid fa-play group-hover:translate-x-1 transition-transform"></i>
+                            IN-PRODUCTION SHORTS
+                        </a>
+                        <a href="#projects" onclick="playAudioTone('click')" class="hud-btn bg-slate-900/90 hover:bg-slate-800 border border-cyan-500/50 text-cyan-300 px-6 py-3 rounded-lg shadow-hud hover:border-cyan-400 transition flex items-center gap-2">
+                            <i class="fa-solid fa-folder-open"></i>
+                            FEATURED PROJECTS
+                        </a>
+                        <a href="#contact" onclick="playAudioTone('click')" class="hud-btn bg-violet-900/40 hover:bg-violet-800/60 border border-violet-500/50 text-violet-200 px-6 py-3 rounded-lg transition flex items-center gap-2">
+                            <i class="fa-solid fa-headset"></i>
+                            INITIATE CONTACT
+                        </a>
+                    </div>
+                </div>
+
+                <!-- HUD Character & Stats Card -->
+                <div class="lg:col-span-4 hud-panel hud-panel-violet p-6 rounded-xl space-y-4">
+                    <div class="flex justify-between items-center border-b border-violet-500/30 pb-3 font-mono">
+                        <span class="text-violet-400 font-bold text-sm"><i class="fa-solid fa-chart-simple mr-2"></i>ARTIST STATS</span>
+                        <span class="text-xs text-slate-400">STATUS: ACTIVE</span>
+                    </div>
+
+                    <div class="space-y-3 font-mono text-xs">
+                        <div>
+                            <div class="flex justify-between mb-1">
+                                <span class="text-slate-300">2D ANIMATION & RIGGING</span>
+                                <span class="text-cyan-400 font-bold">95%</span>
+                            </div>
+                            <div class="w-full bg-slate-900 rounded-full h-2 border border-slate-700">
+                                <div class="bg-gradient-to-r from-cyan-500 to-blue-500 h-1.5 rounded-full" style="width: 95%"></div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <div class="flex justify-between mb-1">
+                                <span class="text-slate-300">CHARACTER DESIGN & ILLUSTRATION</span>
+                                <span class="text-cyan-400 font-bold">92%</span>
+                            </div>
+                            <div class="w-full bg-slate-900 rounded-full h-2 border border-slate-700">
+                                <div class="bg-gradient-to-r from-cyan-500 to-violet-500 h-1.5 rounded-full" style="width: 92%"></div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <div class="flex justify-between mb-1">
+                                <span class="text-slate-300">STORYBOARDING & ANIMATICS</span>
+                                <span class="text-cyan-400 font-bold">90%</span>
+                            </div>
+                            <div class="w-full bg-slate-900 rounded-full h-2 border border-slate-700">
+                                <div class="bg-gradient-to-r from-violet-500 to-amber-500 h-1.5 rounded-full" style="width: 90%"></div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <div class="flex justify-between mb-1">
+                                <span class="text-slate-300">STOP-MOTION / CLAYMATION</span>
+                                <span class="text-cyan-400 font-bold">88%</span>
+                            </div>
+                            <div class="w-full bg-slate-900 rounded-full h-2 border border-slate-700">
+                                <div class="bg-gradient-to-r from-amber-500 to-rose-500 h-1.5 rounded-full" style="width: 88%"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Quick Spec Badges -->
+                    <div class="pt-2 border-t border-slate-800 grid grid-cols-2 gap-2 text-center font-mono text-xs">
+                        <div class="bg-slate-900/80 p-2 rounded border border-slate-800">
+                            <div class="text-slate-400">DEGREE</div>
+                            <div class="text-amber-300 font-bold mt-0.5">B.Sc Media</div>
+                        </div>
+                        <div class="bg-slate-900/80 p-2 rounded border border-slate-800">
+                            <div class="text-slate-400">GRADUATION</div>
+                            <div class="text-cyan-300 font-bold mt-0.5">SEPT 2027</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- FLAGSHIP PROJECT SECTION -->
+        <section id="flagship" class="scroll-mt-20">
+            <div class="hud-panel p-6 md:p-10 rounded-2xl border-cyan-500/40 relative overflow-hidden">
+                <div class="absolute top-0 right-0 p-8 opacity-10 font-mono text-9xl font-extrabold select-none pointer-events-none text-cyan-400 hidden md:block">
+                    01
+                </div>
+
+                <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-rose-500/20 border border-rose-500/50 text-rose-300 font-mono text-xs font-bold mb-4">
+                    <span class="w-2 h-2 rounded-full bg-rose-500 animate-ping"></span>
+                    CURRENT KEY PROJECT &bull; IN PRODUCTION
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+                    <div class="lg:col-span-7 space-y-4">
+                        <h2 class="text-3xl md:text-5xl font-black font-mono text-white text-glow-cyan">
+                            “The Ring of Veris”
+                        </h2>
+                        <p class="text-cyan-300 font-mono text-sm">
+                            Role: Director, Lead Animator & Visual Artist
+                        </p>
+                        <p class="text-slate-300 leading-relaxed">
+                            An ambitious original 2D animated short film focusing on atmospheric visual storytelling and fluid character movement. Handling end-to-end pre-production and production tasks including concept design, character rigging, background illustration, and scene compositing.
+                        </p>
+
+                        <div class="flex flex-wrap gap-2 pt-2 font-mono text-xs">
+                            <span class="bg-slate-900 text-cyan-300 border border-cyan-500/30 px-3 py-1 rounded">2D Short Film</span>
+                            <span class="bg-slate-900 text-violet-300 border border-violet-500/30 px-3 py-1 rounded">Character Rigging</span>
+                            <span class="bg-slate-900 text-amber-300 border border-amber-500/30 px-3 py-1 rounded">Atmospheric Lighting</span>
+                            <span class="bg-slate-900 text-emerald-300 border border-emerald-500/30 px-3 py-1 rounded">Compositing</span>
+                        </div>
+
+                        <div class="pt-4 flex items-center gap-4">
+                            <button onclick="openModal('veris')" class="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-mono font-bold px-5 py-2.5 rounded-lg shadow-neon-cyan transition flex items-center gap-2">
+                                <i class="fa-solid fa-circle-info"></i> EXPLORE PRODUCTION BRIEF
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Interactive Animated Preview Box -->
+                    <div class="lg:col-span-5">
+                        <div class="hud-panel p-4 rounded-xl bg-slate-950/90 border-slate-700 relative group overflow-hidden">
+                            <div class="relative h-64 w-full rounded-lg bg-gradient-to-br from-purple-950 via-slate-900 to-cyan-950 flex flex-col justify-center items-center text-center p-6 border border-cyan-500/30 overflow-hidden">
+                                <i class="fa-solid fa-film text-6xl text-cyan-400/40 group-hover:scale-110 transition-transform duration-500 mb-3"></i>
+                                <span class="font-mono text-sm text-cyan-200 font-bold">THE RING OF VERIS</span>
+                                <span class="text-xs text-slate-400 font-mono mt-1">2D ANIMATED CONCEPT REEL</span>
+                                <div class="absolute inset-0 bg-cyan-500/10 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                    <button onclick="openModal('veris')" class="bg-cyan-400 text-black font-mono font-bold text-xs px-4 py-2 rounded shadow-lg">
+                                        VIEW SHOT BREAKDOWN
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- FEATURED PROJECTS GRID SECTION -->
+        <section id="projects" class="scroll-mt-20 space-y-6">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-end border-b border-cyan-500/30 pb-4">
+                <div>
+                    <span class="text-cyan-400 font-mono text-xs font-bold tracking-widest uppercase">// ARCHIVE VAULT</span>
+                    <h2 class="text-3xl font-mono font-extrabold text-white">FEATURED PROJECTS</h2>
+                </div>
+                <span class="text-slate-400 font-mono text-xs mt-2 md:mt-0">3 REPOSITORIES LOADED</span>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <!-- Project Card 1: Masked -->
+                <div class="hud-panel p-6 rounded-xl space-y-4 hover:border-cyan-400 transition-all group flex flex-col justify-between">
+                    <div class="space-y-3">
+                        <div class="flex justify-between items-start">
+                            <span class="px-2 py-0.5 rounded bg-violet-500/20 border border-violet-400/40 text-violet-300 font-mono text-xs">ANIMATED SHORT</span>
+                            <i class="fa-solid fa-masks-theater text-cyan-400 text-xl group-hover:rotate-12 transition-transform"></i>
+                        </div>
+                        <h3 class="text-xl font-mono font-bold text-white group-hover:text-cyan-300 transition-colors">
+                            “Masked”
+                        </h3>
+                        <p class="text-xs font-mono text-amber-400">Animated Short Film</p>
+                        <p class="text-slate-300 text-sm leading-relaxed">
+                            Conceptualized and rendered a compelling animated short exploring themes of identity and visual symbolism using digital drawing suites and frame-by-frame color grading.
+                        </p>
+                    </div>
+
+                    <div class="pt-4 border-t border-slate-800/80 flex justify-between items-center">
+                        <span class="text-xs font-mono text-slate-500">FRAME-BY-FRAME</span>
+                        <button onclick="openModal('masked')" class="text-xs font-mono text-cyan-400 hover:text-cyan-300 flex items-center gap-1 font-bold">
+                            SPECS <i class="fa-solid fa-arrow-right"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Project Card 2: Rewrite the Stars -->
+                <div class="hud-panel p-6 rounded-xl space-y-4 hover:border-cyan-400 transition-all group flex flex-col justify-between">
+                    <div class="space-y-3">
+                        <div class="flex justify-between items-start">
+                            <span class="px-2 py-0.5 rounded bg-amber-500/20 border border-amber-400/40 text-amber-300 font-mono text-xs">NARRATIVE ANIMATIC</span>
+                            <i class="fa-solid fa-clapperboard text-cyan-400 text-xl group-hover:rotate-12 transition-transform"></i>
+                        </div>
+                        <h3 class="text-xl font-mono font-bold text-white group-hover:text-cyan-300 transition-colors">
+                            “Rewrite the Stars”
+                        </h3>
+                        <p class="text-xs font-mono text-amber-400">Cinematic Story Animatic</p>
+                        <p class="text-slate-300 text-sm leading-relaxed">
+                            Produced a synchronized, story-driven animatic showcasing strong pacing, cinematic shot composition, expressive character poses, and keyframe audio synchronization.
+                        </p>
+                    </div>
+
+                    <div class="pt-4 border-t border-slate-800/80 flex justify-between items-center">
+                        <span class="text-xs font-mono text-slate-500">STORYBOARDING</span>
+                        <button onclick="openModal('rewrite')" class="text-xs font-mono text-cyan-400 hover:text-cyan-300 flex items-center gap-1 font-bold">
+                            SPECS <i class="fa-solid fa-arrow-right"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Project Card 3: Claymation Project -->
+                <div class="hud-panel p-6 rounded-xl space-y-4 hover:border-cyan-400 transition-all group flex flex-col justify-between">
+                    <div class="space-y-3">
+                        <div class="flex justify-between items-start">
+                            <span class="px-2 py-0.5 rounded bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 font-mono text-xs">STOP-MOTION</span>
+                            <i class="fa-solid fa-cubes-stacked text-cyan-400 text-xl group-hover:rotate-12 transition-transform"></i>
+                        </div>
+                        <h3 class="text-xl font-mono font-bold text-white group-hover:text-cyan-300 transition-colors">
+                            “Claymation Project”
+                        </h3>
+                        <p class="text-xs font-mono text-amber-400">Physical Clay Modelling</p>
+                        <p class="text-slate-300 text-sm leading-relaxed">
+                            Designed, sculpted, and animated physical clay models to explore tactile frame-by-frame stop-motion techniques, lighting, and physical frame timing.
+                        </p>
+                    </div>
+
+                    <div class="pt-4 border-t border-slate-800/80 flex justify-between items-center">
+                        <span class="text-xs font-mono text-slate-500">TACTILE / SCULPTING</span>
+                        <button onclick="openModal('clay')" class="text-xs font-mono text-cyan-400 hover:text-cyan-300 flex items-center gap-1 font-bold">
+                            SPECS <i class="fa-solid fa-arrow-right"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SOFTWARE & TECHNICAL SKILLS MATRIX -->
+        <section id="skills" class="scroll-mt-20 space-y-6">
+            <div class="border-b border-cyan-500/30 pb-4">
+                <span class="text-violet-400 font-mono text-xs font-bold tracking-widest uppercase">// INVENTORY & TOOLS</span>
+                <h2 class="text-3xl font-mono font-extrabold text-white">SOFTWARE & TECHNICAL SUITE</h2>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <!-- Software Stack -->
+                <div class="hud-panel p-6 rounded-xl space-y-4">
+                    <h3 class="text-lg font-mono font-bold text-cyan-300 flex items-center gap-2 border-b border-slate-800 pb-2">
+                        <i class="fa-solid fa-laptop-code text-cyan-400"></i> SOFTWARE ARSENAL
+                    </h3>
+
+                    <div class="grid grid-cols-2 gap-3 font-mono text-xs">
+                        <div class="bg-slate-900/90 p-3 rounded border border-slate-800 hover:border-cyan-500/50 transition">
+                            <div class="text-white font-bold flex items-center gap-2">
+                                <i class="fa-solid fa-image text-blue-400"></i> Photoshop
+                            </div>
+                            <span class="text-slate-400 text-[10px]">Digital Illustration & Concept</span>
+                        </div>
+
+                        <div class="bg-slate-900/90 p-3 rounded border border-slate-800 hover:border-cyan-500/50 transition">
+                            <div class="text-white font-bold flex items-center gap-2">
+                                <i class="fa-solid fa-film text-purple-400"></i> Premiere Pro
+                            </div>
+                            <span class="text-slate-400 text-[10px]">Video Editing & Timing</span>
+                        </div>
+
+                        <div class="bg-slate-900/90 p-3 rounded border border-slate-800 hover:border-cyan-500/50 transition">
+                            <div class="text-white font-bold flex items-center gap-2">
+                                <i class="fa-solid fa-wand-magic-sparkles text-indigo-400"></i> After Effects
+                            </div>
+                            <span class="text-slate-400 text-[10px]">Compositing & Motion FX</span>
+                        </div>
+
+                        <div class="bg-slate-900/90 p-3 rounded border border-slate-800 hover:border-cyan-500/50 transition">
+                            <div class="text-white font-bold flex items-center gap-2">
+                                <i class="fa-solid fa-cube text-amber-400"></i> Blender (3D/2D)
+                            </div>
+                            <span class="text-slate-400 text-[10px]">3D/2D Modeling & Grease Pencil</span>
+                        </div>
+
+                        <div class="bg-slate-900/90 p-3 rounded border border-slate-800 hover:border-cyan-500/50 transition">
+                            <div class="text-white font-bold flex items-center gap-2">
+                                <i class="fa-solid fa-scissors text-emerald-400"></i> Clipchamp Studio
+                            </div>
+                            <span class="text-slate-400 text-[10px]">Rapid Audio/Video Assembly</span>
+                        </div>
+
+                        <div class="bg-slate-900/90 p-3 rounded border border-slate-800 hover:border-cyan-500/50 transition">
+                            <div class="text-white font-bold flex items-center gap-2">
+                                <i class="fa-solid fa-palette text-rose-400"></i> 2D Art Suites
+                            </div>
+                            <span class="text-slate-400 text-[10px]">Digital Painting Tools</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Core Creative Capabilities -->
+                <div class="hud-panel hud-panel-violet p-6 rounded-xl space-y-4">
+                    <h3 class="text-lg font-mono font-bold text-violet-300 flex items-center gap-2 border-b border-slate-800 pb-2">
+                        <i class="fa-solid fa-brain text-violet-400"></i> CORE COMPETENCIES
+                    </h3>
+
+                    <div class="space-y-2 text-sm">
+                        <div class="bg-slate-900/80 p-2.5 rounded border border-slate-800 flex justify-between items-center">
+                            <span class="font-mono text-slate-200">2D Animation & Rigging</span>
+                            <span class="px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-300 text-xs font-mono">Expert</span>
+                        </div>
+                        <div class="bg-slate-900/80 p-2.5 rounded border border-slate-800 flex justify-between items-center">
+                            <span class="font-mono text-slate-200">Digital Illustration & Character Design</span>
+                            <span class="px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-300 text-xs font-mono">Expert</span>
+                        </div>
+                        <div class="bg-slate-900/80 p-2.5 rounded border border-slate-800 flex justify-between items-center">
+                            <span class="font-mono text-slate-200">Storyboarding & Animatics</span>
+                            <span class="px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-300 text-xs font-mono">Advanced</span>
+                        </div>
+                        <div class="bg-slate-900/80 p-2.5 rounded border border-slate-800 flex justify-between items-center">
+                            <span class="font-mono text-slate-200">Stop-Motion / Claymation</span>
+                            <span class="px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-300 text-xs font-mono">Advanced</span>
+                        </div>
+                        <div class="bg-slate-900/80 p-2.5 rounded border border-slate-800 flex justify-between items-center">
+                            <span class="font-mono text-slate-200">Video Editing & Audio Compositing</span>
+                            <span class="px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-300 text-xs font-mono">Advanced</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- CREATIVE LEADERSHIP & TIMELINE SECTION -->
+        <section id="leadership" class="scroll-mt-20 space-y-6">
+            <div class="border-b border-cyan-500/30 pb-4">
+                <span class="text-amber-400 font-mono text-xs font-bold tracking-widest uppercase">// QUEST LOG</span>
+                <h2 class="text-3xl font-mono font-extrabold text-white">CREATIVE LEADERSHIP & EXPERIENCE</h2>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                <!-- Leadership Timeline Cards -->
+                <div class="lg:col-span-8 space-y-4">
+                    <div class="hud-panel p-6 rounded-xl relative pl-8 border-l-2 border-l-cyan-400">
+                        <div class="absolute -left-3 top-6 w-6 h-6 rounded-full bg-slate-900 border-2 border-cyan-400 flex items-center justify-center text-cyan-400 text-xs">
+                            <i class="fa-brands fa-youtube"></i>
+                        </div>
+                        <h4 class="font-mono font-bold text-lg text-white">YouTube Content Creation</h4>
+                        <p class="text-xs font-mono text-cyan-300 mb-2">Creator & Video Editor</p>
+                        <p class="text-slate-300 text-sm leading-relaxed">
+                            Manages and edits content for a personal YouTube channel, producing animated clips, speedpaints, and digital art tutorials to engage a visual community.
+                        </p>
+                    </div>
+
+                    <div class="hud-panel p-6 rounded-xl relative pl-8 border-l-2 border-l-violet-400">
+                        <div class="absolute -left-3 top-6 w-6 h-6 rounded-full bg-slate-900 border-2 border-violet-400 flex items-center justify-center text-violet-400 text-xs">
+                            <i class="fa-solid fa-masks-theater"></i>
+                        </div>
+                        <h4 class="font-mono font-bold text-lg text-white">Theatre & Stage Performances</h4>
+                        <p class="text-xs font-mono text-violet-300 mb-2">Dramatic Performing Artist</p>
+                        <p class="text-slate-300 text-sm leading-relaxed">
+                            Active participant in stage theatre, bringing a strong understanding of dramatic pacing, character expression, body language, and voice acting directly into animation work.
+                        </p>
+                    </div>
+
+                    <div class="hud-panel p-6 rounded-xl relative pl-8 border-l-2 border-l-amber-400">
+                        <div class="absolute -left-3 top-6 w-6 h-6 rounded-full bg-slate-900 border-2 border-amber-400 flex items-center justify-center text-amber-400 text-xs">
+                            <i class="fa-solid fa-pen-nib"></i>
+                        </div>
+                        <h4 class="font-mono font-bold text-lg text-white">Creative Writing & World-Building</h4>
+                        <p class="text-xs font-mono text-amber-300 mb-2">Narrative & Lore Architect</p>
+                        <p class="text-slate-300 text-sm leading-relaxed">
+                            Drafts original narrative scripts, lore bibles, character backstories, and world-building frameworks utilized in film projects and animatics.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Languages & Education Summary -->
+                <div class="lg:col-span-4 space-y-6">
+                    <!-- Languages Panel -->
+                    <div class="hud-panel p-6 rounded-xl space-y-3">
+                        <h3 class="font-mono font-bold text-cyan-300 text-sm border-b border-slate-800 pb-2">
+                            <i class="fa-solid fa-language mr-1"></i> LANGUAGES
+                        </h3>
+                        <ul class="space-y-2 font-mono text-xs">
+                            <li class="flex justify-between items-center bg-slate-900/60 p-2 rounded">
+                                <span class="text-slate-200">English</span>
+                                <span class="text-cyan-400 font-bold">Advanced / Fluent</span>
+                            </li>
+                            <li class="flex justify-between items-center bg-slate-900/60 p-2 rounded">
+                                <span class="text-slate-200">Hindi</span>
+                                <span class="text-amber-400 font-bold">Proficient</span>
+                            </li>
+                            <li class="flex justify-between items-center bg-slate-900/60 p-2 rounded">
+                                <span class="text-slate-200">Malayalam</span>
+                                <span class="text-emerald-400 font-bold">Native / Fluent</span>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <!-- Education Card -->
+                    <div class="hud-panel p-6 rounded-xl space-y-3">
+                        <h3 class="font-mono font-bold text-amber-300 text-sm border-b border-slate-800 pb-2">
+                            <i class="fa-solid fa-graduation-cap mr-1"></i> EDUCATION
+                        </h3>
+                        <div>
+                            <div class="font-mono font-bold text-white text-sm">B.Sc Digital Media & Animation</div>
+                            <div class="text-xs text-cyan-300 font-mono">St. Joseph's University</div>
+                            <div class="text-[11px] text-slate-400 font-mono mt-1">Graduation: Sept 2027</div>
+                        </div>
+                        <div class="pt-2 border-t border-slate-800">
+                            <div class="font-mono text-xs font-bold text-slate-300">Higher Secondary</div>
+                            <div class="text-xs text-slate-400 font-mono">Rajagiri Public School</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- CONTACT SECTION -->
+        <section id="contact" class="scroll-mt-20">
+            <div class="hud-panel p-6 md:p-10 rounded-2xl text-center space-y-6 max-w-3xl mx-auto border-cyan-500/40">
+                <div class="inline-block px-3 py-1 rounded bg-cyan-500/20 text-cyan-300 font-mono text-xs font-bold">
+                    SIGNAL FREQUENCY: OPEN
+                </div>
+
+                <h2 class="text-3xl md:text-4xl font-mono font-extrabold text-white text-glow-cyan">
+                    LET'S CREATE TOGETHER
+                </h2>
+
+                <p class="text-slate-300 text-sm md:text-base leading-relaxed">
+                    Always eager to collaborate on ambitious 2D/3D animation projects, concept artwork, world-building scripts, and digital media production.
+                </p>
+
+                <div class="pt-4 flex flex-wrap justify-center gap-4 font-mono text-sm">
+                    <button onclick="copyToClipboard('sarajoseph@example.com')" class="hud-btn bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold px-6 py-3 rounded-lg shadow-neon-cyan transition flex items-center gap-2">
+                        <i class="fa-solid fa-copy"></i> COPY EMAIL ADDRESS
+                    </button>
+                    <a href="https://youtube.com" target="_blank" rel="noopener" class="hud-btn bg-rose-900/50 hover:bg-rose-800 border border-rose-500/50 text-rose-200 px-6 py-3 rounded-lg transition flex items-center gap-2">
+                        <i class="fa-brands fa-youtube"></i> YOUTUBE CHANNEL
+                    </a>
+                </div>
+
+                <div id="toast" class="hidden text-xs font-mono text-emerald-400 bg-emerald-950/80 border border-emerald-500/50 py-2 px-4 rounded inline-block transition-all">
+                    Email address copied to clipboard!
+                </div>
+            </div>
+        </section>
+
+        <!-- FOOTER HUD -->
+        <footer class="pt-10 border-t border-slate-800/80 flex flex-col md:flex-row justify-between items-center text-xs font-mono text-slate-500 gap-4">
+            <div>
+                &copy; 2026 SARA JOSEPH KAITHAYIL &bull; BUILT WITH THREE.JS & TAILWIND
+            </div>
+            <div class="flex items-center gap-4">
+                <span>SYSTEM: OK</span>
+                <span>ENGINE: UNREAL HUD STYLED</span>
+            </div>
+        </footer>
+
+    </main>
+
+    <!-- PROJECT DETAIL MODAL CONTAINER -->
+    <div id="modal-backdrop" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-md hidden items-center justify-center p-4">
+        <div id="modal-card" class="hud-panel p-6 md:p-8 rounded-2xl max-w-2xl w-full max-h-[85vh] overflow-y-auto space-y-6 relative border-cyan-400 shadow-neon-cyan">
+            <button onclick="closeModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white font-mono text-xl w-8 h-8 rounded-full bg-slate-900 flex items-center justify-center border border-slate-700">
+                &times;
+            </button>
+
+            <div id="modal-content">
+                <!-- Dynamic Content Injected Here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript Section: Three.js WebGL Scene, Interactions, & Audio -->
+    <script>
+        // --- AUDIO SYNTHESIZER SOUND EFFECTS ---
+        let audioCtx = null;
+        let soundEnabled = false;
+
+        function initAudio() {
+            if (!audioCtx) {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                audioCtx = new AudioContext();
+            }
+        }
+
+        function playAudioTone(type) {
+            if (!soundEnabled) return;
+            initAudio();
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+
+            const now = audioCtx.currentTime;
+
+            if (type === 'click') {
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(440, now);
+                osc.frequency.exponentialRampToValueAtTime(880, now + 0.08);
+                gain.gain.setValueAtTime(0.15, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.08);
+                osc.start(now);
+                osc.stop(now + 0.08);
+            } else if (type === 'burst') {
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(220, now);
+                osc.frequency.exponentialRampToValueAtTime(110, now + 0.2);
+                gain.gain.setValueAtTime(0.2, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+                osc.start(now);
+                osc.stop(now + 0.2);
+            }
+        }
+
+        document.getElementById('audio-toggle').addEventListener('click', () => {
+            soundEnabled = !soundEnabled;
+            const icon = document.getElementById('audio-icon');
+            if (soundEnabled) {
+                icon.className = 'fa-solid fa-volume-high';
+                playAudioTone('click');
+            } else {
+                icon.className = 'fa-solid fa-volume-xmark';
+            }
+        });
+
+        // --- THREE.JS 3D SCENE SETUP ---
+        let scene, camera, renderer;
+        let gridHelper;
+        let particles, particlePositions, particleVelocities;
+        let geometryNodes = [];
+        let mouseX = 0, mouseY = 0;
+        let targetCameraPos = { x: 0, y: 12, z: 35 };
+
+        function init3D() {
+            const container = document.getElementById('webgl-container');
+
+            // Scene
+            scene = new THREE.Scene();
+            scene.fog = new THREE.FogExp2(0x07090e, 0.02);
+
+            // Camera
+            camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(targetCameraPos.x, targetCameraPos.y, targetCameraPos.z);
+
+            // Renderer
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            container.appendChild(renderer.domElement);
+
+            // Grid Floor
+            const gridGeom = new THREE.PlaneGeometry(120, 120, 40, 40);
+            const gridMat = new THREE.MeshBasicMaterial({
+                color: 0x00f0ff,
+                wireframe: true,
+                transparent: true,
+                opacity: 0.12
+            });
+            gridHelper = new THREE.Mesh(gridGeom, gridMat);
+            gridHelper.rotation.x = -Math.PI / 2;
+            gridHelper.position.y = -8;
+            scene.add(gridHelper);
+
+            // Floating 3D Geometric Nodes (Unreal Engine Viewport Style)
+            const shapes = [
+                new THREE.IcosahedronGeometry(2, 0),
+                new THREE.OctahedronGeometry(2.5, 0),
+                new THREE.TorusKnotGeometry(1.8, 0.4, 64, 8)
+            ];
+
+            const materials = [
+                new THREE.MeshStandardMaterial({ color: 0x00f0ff, wireframe: true, roughness: 0.2 }),
+                new THREE.MeshStandardMaterial({ color: 0xa855f7, wireframe: true, roughness: 0.2 }),
+                new THREE.MeshStandardMaterial({ color: 0xfbbf24, wireframe: true, roughness: 0.2 })
+            ];
+
+            for (let i = 0; i < 15; i++) {
+                const geom = shapes[i % shapes.length];
+                const mat = materials[i % materials.length].clone();
+                const mesh = new THREE.Mesh(geom, mat);
+
+                mesh.position.set(
+                    (Math.random() - 0.5) * 60,
+                    (Math.random() - 0.5) * 30 + 5,
+                    (Math.random() - 0.5) * 50 - 10
+                );
+
+                mesh.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, 0);
+                mesh.userData = {
+                    rotSpeedX: (Math.random() - 0.5) * 0.015,
+                    rotSpeedY: (Math.random() - 0.5) * 0.015,
+                    floatSpeed: Math.random() * 0.02,
+                    initialY: mesh.position.y
+                };
+
+                scene.add(mesh);
+                geometryNodes.push(mesh);
+            }
+
+            // Interactive Particle Starfield System
+            const particleCount = 700;
+            const pGeom = new THREE.BufferGeometry();
+            particlePositions = new Float32Array(particleCount * 3);
+            particleVelocities = [];
+
+            for (let i = 0; i < particleCount * 3; i += 3) {
+                particlePositions[i] = (Math.random() - 0.5) * 90;
+                particlePositions[i + 1] = (Math.random() - 0.5) * 60;
+                particlePositions[i + 2] = (Math.random() - 0.5) * 90;
+
+                particleVelocities.push({
+                    x: (Math.random() - 0.5) * 0.02,
+                    y: (Math.random() - 0.5) * 0.02,
+                    z: (Math.random() - 0.5) * 0.02
+                });
+            }
+
+            pGeom.setAttribute('position', new THREE.BufferAttribute(particlePositions, 3));
+
+            const pMat = new THREE.PointsMaterial({
+                color: 0x00f0ff,
+                size: 0.35,
+                transparent: true,
+                opacity: 0.7
+            });
+
+            particles = new THREE.Points(pGeom, pMat);
+            scene.add(particles);
+
+            // Ambient & Point Lighting
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
+            scene.add(ambientLight);
+
+            const cyanLight = new THREE.PointLight(0x00f0ff, 2, 80);
+            cyanLight.position.set(10, 20, 10);
+            scene.add(cyanLight);
+
+            const violetLight = new THREE.PointLight(0xa855f7, 2, 80);
+            violetLight.position.set(-10, -10, -10);
+            scene.add(violetLight);
+
+            // Listeners
+            window.addEventListener('resize', onWindowResize);
+            window.addEventListener('mousemove', onMouseMove);
+            window.addEventListener('click', onCanvasClick);
+        }
+
+        // Mouse Parallax & Interaction
+        function onMouseMove(e) {
+            mouseX = (e.clientX / window.innerWidth) * 2 - 1;
+            mouseY = -(e.clientY / window.innerHeight) * 2 + 1;
+        }
+
+        // Interactive Canvas Click Burst
+        function onCanvasClick(e) {
+            if (e.target.tagName !== 'CANVAS') return;
+            playAudioTone('burst');
+
+            // Generate temporary particle dispersion
+            const positions = particles.geometry.attributes.position.array;
+            for (let i = 0; i < positions.length; i += 3) {
+                positions[i] += (Math.random() - 0.5) * 2;
+                positions[i + 1] += (Math.random() - 0.5) * 2;
+            }
+            particles.geometry.attributes.position.needsUpdate = true;
+        }
+
+        // Camera View Mode Controller
+        function setCameraView(view) {
+            playAudioTone('click');
+            if (view === 'perspective') {
+                targetCameraPos = { x: 0, y: 12, z: 35 };
+            } else if (view === 'top') {
+                targetCameraPos = { x: 0, y: 45, z: 0.1 };
+            } else if (view === 'front') {
+                targetCameraPos = { x: 0, y: 0, z: 40 };
+            }
+        }
+
+        // Toggle Wireframe Mode
+        let isWireframe = true;
+        document.getElementById('wireframe-toggle').addEventListener('click', () => {
+            playAudioTone('click');
+            isWireframe = !isWireframe;
+            geometryNodes.forEach(node => {
+                node.material.wireframe = isWireframe;
+            });
+        });
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        // Animation Loop
+        let frameCount = 0;
+        let lastTime = performance.now();
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            // FPS Counter
+            frameCount++;
+            const currentTime = performance.now();
+            if (currentTime - lastTime >= 1000) {
+                document.getElementById('fps-counter').innerText = frameCount;
+                frameCount = 0;
+                lastTime = currentTime;
+            }
+
+            // Smooth Camera Interpolation towards mouse parallax & target view
+            camera.position.x += (targetCameraPos.x + mouseX * 4 - camera.position.x) * 0.05;
+            camera.position.y += (targetCameraPos.y + mouseY * 4 - camera.position.y) * 0.05;
+            camera.position.z += (targetCameraPos.z - camera.position.z) * 0.05;
+            camera.lookAt(0, 0, 0);
+
+            // Animate Geometry Nodes
+            const time = Date.now() * 0.001;
+            geometryNodes.forEach((mesh) => {
+                mesh.rotation.x += mesh.userData.rotSpeedX;
+                mesh.rotation.y += mesh.userData.rotSpeedY;
+                mesh.position.y = mesh.userData.initialY + Math.sin(time + mesh.position.x) * 1.5;
+            });
+
+            // Animate Grid
+            if (gridHelper) {
+                gridHelper.rotation.z = Math.sin(time * 0.2) * 0.05;
+            }
+
+            // Animate Particle Starfield
+            const pos = particles.geometry.attributes.position.array;
+            for (let i = 0; i < pos.length; i += 3) {
+                pos[i] += particleVelocities[i / 3].x;
+                pos[i + 1] += particleVelocities[i / 3].y;
+                pos[i + 2] += particleVelocities[i / 3].z;
+
+                // Boundary Wrap
+                if (Math.abs(pos[i]) > 45) pos[i] *= -1;
+                if (Math.abs(pos[i + 1]) > 30) pos[i + 1] *= -1;
+                if (Math.abs(pos[i + 2]) > 45) pos[i + 2] *= -1;
+            }
+            particles.geometry.attributes.position.needsUpdate = true;
+
+            renderer.render(scene, camera);
+        }
+
+        // Start 3D Engine on load
+        window.onload = function() {
+            init3D();
+            animate();
+        };
+
+        // --- MODAL UTILITIES ---
+        const modalData = {
+            veris: {
+                title: "“The Ring of Veris” — In-Production Short",
+                role: "Director, Lead Animator & Visual Artist",
+                status: "In Production",
+                details: "Directing and animating an original 2D animated short film centered on dark fantasy world-building, high-pacing keyframes, and character rigging. End-to-end responsibilities encompass concept artwork, background environment painting, frame compositing, and audio synchronization."
+            },
+            masked: {
+                title: "“Masked” — Animated Short Film",
+                role: "Animator & Visual Designer",
+                status: "Completed Archive",
+                details: "Conceptualized and rendered a compelling animated short exploring themes of identity and visual symbolism. Utilized digital drawing suites and editing software for frame-by-frame animation, color grading, and audio synchronization."
+            },
+            rewrite: {
+                title: "“Rewrite the Stars” — Narrative Animatic",
+                role: "Storyboard Artist & Animatic Director",
+                status: "Completed Archive",
+                details: "Produced a synchronized, story-driven animatic showcasing strong sense of pacing, cinematic shot composition, and visual emotion. Developed expressive character poses, keyframes, and timing to complement dramatic audio tracks."
+            },
+            clay: {
+                title: "“Claymation Project” — Stop-Motion Animation",
+                role: "Model Sculptor & Frame Animator",
+                status: "Completed Archive",
+                details: "Designed, sculpted, and animated physical clay models to explore tactile frame-by-frame stop-motion techniques. Demonstrated versatility across non-digital animation mediums, mastering lighting, frame consistency, and physical timing."
+            }
+        };
+
+        function openModal(key) {
+            playAudioTone('click');
+            const data = modalData[key];
+            if (!data) return;
+
+            const content = `
+                <div class="space-y-4 font-mono">
+                    <span class="px-2.5 py-1 rounded bg-cyan-500/20 text-cyan-300 text-xs font-bold border border-cyan-500/40">
+                        ${data.status}
+                    </span>
+                    <h3 class="text-2xl font-bold text-white">${data.title}</h3>
+                    <p class="text-amber-400 text-xs">${data.role}</p>
+                    <p class="text-slate-300 text-sm leading-relaxed font-sans">${data.details}</p>
+                    <div class="pt-4 border-t border-slate-800 flex justify-end">
+                        <button onclick="closeModal()" class="bg-cyan-500 text-slate-950 font-bold px-4 py-2 rounded text-xs hover:bg-cyan-400">
+                            CLOSE SPEC
+                        </button>
+                    </div>
+                </div>
+            `;
+            document.getElementById('modal-content').innerHTML = content;
+            const backdrop = document.getElementById('modal-backdrop');
+            backdrop.classList.remove('hidden');
+            backdrop.classList.add('flex');
+        }
+
+        function closeModal() {
+            playAudioTone('click');
+            const backdrop = document.getElementById('modal-backdrop');
+            backdrop.classList.remove('flex');
+            backdrop.classList.add('hidden');
+        }
+
+        // Copy Clipboard Helper
+        function copyToClipboard(text) {
+            playAudioTone('click');
+            const tempInput = document.createElement('input');
+            tempInput.value = text;
+            document.body.appendChild(tempInput);
+            tempInput.select();
+            document.execCommand('copy');
+            document.body.removeChild(tempInput);
+
+            const toast = document.getElementById('toast');
+            toast.classList.remove('hidden');
+            setTimeout(() => {
+                toast.classList.add('hidden');
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
